@@ -1,0 +1,19 @@
+{
+  "name": "ECSFX.Authoring",
+  "rootNamespace": "ECSFX.Authoring",
+  "references": [
+    "GUID:8ace8eb361e890e4bab93335e5ebfbab",
+    "Unity.Collections",
+    "Unity.Entities",
+    "Unity.Entities.Hybrid"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": true,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
