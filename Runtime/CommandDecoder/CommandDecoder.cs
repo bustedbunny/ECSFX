@@ -1,16 +1,20 @@
 ﻿using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
+using Unity.Entities;
 
 namespace ECSFX
 {
     public class CommandDecoder
     {
-        private readonly Dictionary<Command, IDecoder> _decoders = new();
+        private readonly Dictionary<int, IDecoder> _decoders = new();
 
-        public CommandDecoder()
+        public CommandDecoder(EntityManager em)
         {
-            _decoders.Add(Command.Emit, new EmitDecoder());
+            var emit = new EmitDecoder(em);
+            _decoders.Add(emit.TypeHash, emit);
+            var play = new PlayDecoder(em);
+            _decoders.Add(play.TypeHash, play);
         }
 
         public unsafe void Decode(NativeList<byte> buf, FXSingleton fx)
@@ -19,10 +23,14 @@ namespace ECSFX
             var iterator = 0;
             while (iterator < buf.Length)
             {
-                var command = UnsafeUtility.AsRef<Command>(ptr + iterator);
-                var decoder = _decoders[command];
-                decoder.Decode(ptr + iterator + sizeof(Command), fx);
-                iterator += sizeof(Command) + decoder.DataSize;
+                var offset = ptr + iterator;
+                var hash = UnsafeUtility.AsRef<int>(offset);
+                var decoder = _decoders[hash];
+                offset += sizeof(int);
+                var data = UnsafeUtility.AsRef<CommandData>(offset);
+                offset += sizeof(CommandData);
+                decoder.Decode(data, offset, fx);
+                iterator += sizeof(int) + sizeof(CommandData) + decoder.DataSize;
             }
 
             buf.Clear();

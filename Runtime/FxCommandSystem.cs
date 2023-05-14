@@ -12,7 +12,7 @@ namespace ECSFX
         protected override void OnCreate()
         {
             _fx = SystemAPI.ManagedAPI.GetSingleton<FXSingleton>();
-            _decoder = new();
+            _decoder = new(EntityManager);
         }
 
         protected override void OnUpdate()

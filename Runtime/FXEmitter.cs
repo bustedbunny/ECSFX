@@ -42,7 +42,15 @@ namespace ECSFX
                 if (emitter.state <= emitter.rate)
                 {
                     emitter.state += emitter.rate;
-                    fx.Emit(emitter.fx, 1, ltw.Position, ltw.Rotation);
+                    fx.Command(new()
+                    {
+                        e = emitter.fx,
+                        pos = ltw.Position,
+                        rot = ltw.Rotation
+                    }, new Emit
+                    {
+                        count = 1
+                    });
                 }
             }
         }

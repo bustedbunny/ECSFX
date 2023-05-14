@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using Unity.Entities;
 using UnityEngine;
 
@@ -43,33 +45,58 @@ namespace ECSFX
 
         protected override void OnUpdate()
         {
-            var list = _registerQuery.ToEntityArray(CheckedStateRef.WorldUpdateAllocator);
-            foreach (var e in list)
+            if (!_registerQuery.IsEmpty)
             {
-                var ps = SystemAPI.ManagedAPI.GetComponent<ParticleSystem>(e);
-                var emissionModule = ps.emission;
-                emissionModule.enabled = false;
-                ps.gameObject.SetActive(true);
-                EntityManager.AddComponentObject(e, new FXState());
-                _map.map[e] = ps;
+                var list = _registerQuery.ToEntityArray(CheckedStateRef.WorldUpdateAllocator);
+                foreach (var e in list)
+                {
+                    var ps = SystemAPI.ManagedAPI.GetComponent<ParticleSystem>(e);
+                    ps.gameObject.SetActive(true);
+
+                    var all = ps.GetComponentsInChildren<ParticleSystem>();
+                    var totalCount = 0;
+                    foreach (var particleSystem in all)
+                    {
+                        totalCount += particleSystem.main.maxParticles;
+                    }
+
+                    var state = new FXState
+                    {
+                        main = ps,
+                        all = all,
+                        particles = new(totalCount, Allocator.Persistent)
+                    };
+                    EntityManager.AddComponentObject(e, state);
+                    _map.map[e] = state;
+                }
+
+                EntityManager.RemoveComponent<Prefab>(list);
             }
 
-            EntityManager.RemoveComponent<Prefab>(list);
-
-            list = _unregisterQuery.ToEntityArray(CheckedStateRef.WorldUpdateAllocator);
-            foreach (var e in list)
+            if (!_unregisterQuery.IsEmpty)
             {
-                _map.map.Remove(e);
-            }
+                var list = _unregisterQuery.ToEntityArray(CheckedStateRef.WorldUpdateAllocator);
+                foreach (var e in list)
+                {
+                    _map.map.Remove(e);
+                }
 
-            EntityManager.RemoveComponent<FXState>(list);
+                EntityManager.RemoveComponent<FXState>(list);
+                Debug.Log("Cleaned");
+            }
         }
     }
 
-    public class FXState : ICleanupComponentData { }
+    public class FXState : ICleanupComponentData, IDisposable
+    {
+        public ParticleSystem main;
+        public ParticleSystem[] all;
+        public NativeArray<ParticleSystem.Particle> particles;
+        public void Dispose() => particles.Dispose();
+    }
 
     public class FXSingleton : IComponentData
     {
-        public Dictionary<Entity, ParticleSystem> map;
+        public Dictionary<Entity, FXState> map;
     }
 }
